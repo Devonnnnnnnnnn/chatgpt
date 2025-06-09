@@ -2,18 +2,13 @@ const chatBox = document.getElementById('chat-box');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 
+// Default timezone
+let userTimeZone = 'America/New_York';
+
 sendBtn.addEventListener('click', handleUserInput);
 userInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') handleUserInput();
 });
-
-function handleUserInput() {
-  const text = userInput.value.trim();
-  if (!text) return;
-  appendMessage('user', text);
-  userInput.value = '';
-  generateBotResponse(text);
-}
 
 function appendMessage(sender, text) {
   const messageDiv = document.createElement('div');
@@ -23,47 +18,72 @@ function appendMessage(sender, text) {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+function getCurrentTimeString() {
+  const now = new Date();
+  const options = {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: userTimeZone
+  };
+  try {
+    return new Intl.DateTimeFormat('en-US', options).format(now);
+  } catch (e) {
+    return "Invalid timezone format.";
+  }
+}
+
+const phraseResponses = {
+  "my time": () => `Your time is ${getCurrentTimeString()}.`,
+  "your time": "My time is chatbot time — always ready to chat!",
+  "what is my time": () => `Your time is ${getCurrentTimeString()}.`,
+  "what time is it": () => `It's currently ${getCurrentTimeString()} in your timezone.`,
+  "time": "What's your timezone?",
+  "timezone": "To set your timezone, type: set timezone Europe/London",
+  "hello": "Hi there! How can I assist you?",
+  "thank you": "You're welcome!",
+  "thanks": "No problem!",
+  "help": "I'm here to help! Try asking about time or setting a timezone.",
+  "tell me a joke": "Why don't programmers like nature? It has too many bugs!",
+  "goodbye": "Goodbye! Come back soon.",
+};
+
 function generateBotResponse(userText) {
   const text = userText.toLowerCase().trim();
-  let response = "Hmm... I’m not sure how to respond to that.";
 
-  const sentenceResponses = {
-    "hello": "Hi there! How can I assist you?",
-    "hi": "Hello! What's up?",
-    "hey": "Hey! Need anything?",
-    "how are you": "I'm doing great, thanks for asking!",
-    "what is your name": "I'm your friendly chatbot.",
-    "who are you": "I'm just a helpful bot here to chat with you.",
-    "tell me a joke": "Why don't programmers like nature? It has too many bugs!",
-    "thank you": "You're welcome!",
-    "thanks": "No problem!",
-    "goodbye": "Goodbye! Come back soon.",
-    "bye": "See you later!",
-    "can you help me": "Of course! What do you need help with?",
-    "what can you do": "I can chat, tell jokes, and help with simple questions.",
-    "what's the weather": "I can't check weather yet, but I hope it's sunny!",
-    "what time is it": "It's always chatbot time!",
-    "i am sad": "I'm sorry to hear that. I'm here for you.",
-    "i'm bored": "Let's find something fun to talk about!",
-    "i'm hungry": "Maybe grab a snack?",
-    "i love you": "Aww, I love chatting with you too!",
-    "do you like music": "Yes! Music is amazing. What's your favorite band?",
-    "do you like movies": "I love movies! Got a favorite genre?",
-    "do you play games": "I do! Well… text-based ones 😄",
-    "do you code": "Yes, I'm built with code!",
-    "what's your favorite color": "Green — like my glowing chat bubbles!",
-    "how old are you": "Timeless. Bots don’t age!",
-    "are you human": "Nope, 100% digital.",
-    "do you sleep": "I run 24/7!",
-    "what is ai": "AI stands for Artificial Intelligence — like me!",
-    "what is javascript": "JavaScript is a programming language used mostly for websites.",
-    "can you tell me a story": "Once upon a time... a user met a chatbot. The end 😄"
-    // Add more full sentence mappings here
-  };
-
-  if (sentenceResponses[text]) {
-    response = sentenceResponses[text];
+  // Handle "set timezone Region/City"
+  if (text.startsWith("set timezone")) {
+    const tz = userText.substring(13).trim().replace(" ", "_");
+    try {
+      // Validate timezone
+      new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(new Date());
+      userTimeZone = tz;
+      setTimeout(() => appendMessage('bot', `Got it! I'll use the timezone: ${tz}`), 500);
+    } catch (e) {
+      setTimeout(() => appendMessage('bot', `Hmm, "${tz}" doesn't seem to be a valid timezone.`), 500);
+    }
+    return;
   }
 
-  setTimeout(() => appendMessage('bot', response), 500);
+  // Check exact phrase matches
+  for (const phrase of Object.keys(phraseResponses).sort((a, b) => b.length - a.length)) {
+    if (text === phrase) {
+      const response = typeof phraseResponses[phrase] === 'function'
+        ? phraseResponses[phrase]()
+        : phraseResponses[phrase];
+      setTimeout(() => appendMessage('bot', response), 500);
+      return;
+    }
+  }
+
+  // Fallback
+  setTimeout(() => appendMessage('bot', "Hmm... I’m not sure how to respond to that."), 500);
+}
+
+function handleUserInput() {
+  const text = userInput.value.trim();
+  if (!text) return;
+  appendMessage('user', text);
+  userInput.value = '';
+  generateBotResponse(text);
 }
